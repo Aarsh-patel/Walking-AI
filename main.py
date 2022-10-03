@@ -1,22 +1,23 @@
 import pygame
-import time,sys,math,pymunk
+import math,pymunk
+from Simulate import simulate
 
 pygame.init()
 joints = []
 bones = []
+bones_jt = []
+muscle_jt = []
 muscles = []
 n_list = []
 def dist(mouse,joints):
     for i in joints:
         if math.sqrt(pow(i[0]-mouse[0],2)+pow(i[1]-mouse[1],2)) < 10:
+            bones_jt.append(joints.index(i))
             return i
-def dist_mid(mouse,bones):
-    i=0
-    while i<len(bones):
-        n_list.append(((bones[i][0] + bones[i+1][0])/2, (bones[i][1] + bones[i+1][1])/2))
-        i+=2
+def dist_mid(mouse):
     for i in n_list:
         if math.sqrt(pow(i[0]-mouse[0],2)+pow(i[1]-mouse[1],2)) < 10:
+            muscle_jt.append(n_list.index(i))
             return i
 is_joint = False
 is_bone = False
@@ -28,7 +29,7 @@ def joint(mouse):
         if is_joint:    
             joints.append(mouse)
             is_joint = 2
-def bone(a):
+def bone():
     global is_bone
     is_bone = 2
 res = (1080,780)
@@ -66,11 +67,11 @@ while not sim:
                 is_joint = False
                 is_muscle = True
             if is_muscle == 1:
-                c = dist_mid(mouse,bones)
+                c = dist_mid(mouse)
                 if c:
                     is_muscle = 2
             if is_muscle == 3:
-                d = dist_mid(mouse,bones)
+                d = dist_mid(mouse)
                 if d:
                     muscles.append(c)
                     muscles.append(d)
@@ -83,13 +84,17 @@ while not sim:
             if is_bone==1:
                 a=dist(mouse,joints)
                 if a:
-                    bone(a)
+                    bone()
             
             if is_bone == 3:
                 b = dist(mouse,joints)
                 if b:
                     bones.append(a)
                     bones.append(b)
+                    z=0
+                    while z<len(bones):
+                        n_list.append(((bones[z][0] + bones[z+1][0])/2, (bones[z][1] + bones[z+1][1])/2))
+                        z+=2
                 is_bone = False
     mouse = pygame.mouse.get_pos()
     if is_bone == 2 or is_bone == 3:
@@ -137,12 +142,21 @@ class organism:
         for i in range(len(joints)):
             coord = joints[i]
             if coord[1]<640:
-                print("coord")
                 coord=(coord[0],coord[1]+10)
                 joints[i] = coord
             else:
                 coord=(coord[0],640)
                 joints[i] = coord
+        for i in range(len(bones_jt)):
+            bones[i] = joints[bones_jt[i]]
+        z =0
+        while z<len(bones):
+            n_list[z] = ((bones[z][0] + bones[z+1][0])/2, (bones[z][1] + bones[z+1][1])/2)
+            z+=2
+        for i in range(len(muscle_jt)):
+            muscles[i] = n_list[muscle_jt[i]]
+
+            
     def draw(self):
         for coord in joints:
             pygame.draw.circle(screen,(255,0,0),coord,10)
@@ -156,13 +170,4 @@ class organism:
             i+=2
 org = organism()
 screen.fill((0,120,0))
-while sim:
-    clock.tick(60)
-    screen.blit(bg, (0, 0))
-    pygame.draw.line(screen,(255,0,0),(0,649),(1280,649),1)
-    for ev in pygame.event.get():  
-        if ev.type == pygame.QUIT:
-            pygame.quit()
-    org.draw()
-    org.update()
-    pygame.display.update()
+simulate(screen,sim,clock,org,bg)
